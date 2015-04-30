@@ -58,7 +58,6 @@ target/
 
 # pycharm
 .idea/
-.idea/encodings.xml
 
 # package specific
 credentials.yml
