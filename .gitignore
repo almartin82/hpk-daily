@@ -58,6 +58,7 @@ target/
 
 # pycharm
 .idea/
+.py___jb_bak___
 
 # package specific
 credentials.yml
