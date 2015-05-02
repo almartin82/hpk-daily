@@ -1,6 +1,7 @@
 from rauth import OAuth1Service
 from rauth.utils import parse_utf8_qsl
 import time
+import xmltodict
 
 
 #adapted from https://github.com/dkempiners/python-yahooapi/blob/master/yahooapi.py
@@ -101,3 +102,8 @@ class YahooAPI:
             self.refresh_access_token()
 
         return self.session.get(request_str)
+
+    def api_query(self, request_str):
+        resp = self.request(request_str)
+        return xmltodict.parse(resp.content)
+
