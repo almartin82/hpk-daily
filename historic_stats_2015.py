@@ -1,7 +1,9 @@
 import yahoo_api
 import yaml
 import functions
-from datetime import date
+import resources
+from datetime import date, timedelta
+import pandas
 
 #read in credentials
 with open("credentials.yml", 'r') as ymlfile:
@@ -11,6 +13,7 @@ with open("credentials.yml", 'r') as ymlfile:
 key = creds['consumer_key']
 secret = creds['consumer_secret']
 
+#initialize a yahoo session
 y = yahoo_api.YahooAPI(
     consumer_key=creds['consumer_key'],
     consumer_secret=creds['consumer_secret'],
@@ -19,5 +22,18 @@ y = yahoo_api.YahooAPI(
     session_handle=creds['session_handle']
 )
 
-r = functions.make_daily_stats_req('346.l.49099.t.1', date.today())
-y.api_query(r)
+d = resources.yr_2014
+dd = [d[0] + timedelta(days=x) for x in range((d[1]-d[0]).days + 1)]
+
+stat_df = pandas.DataFrame()
+
+for day in dd:
+    print day
+    for team in resources.hpk_teams_2014:
+        r = functions.make_daily_stats_req(team, day)
+        raw = y.api_query(r)
+        df = functions.process_team_stats(raw)
+        stat_df = stat_df.append(df)
+
+stat_df.to_csv('team_by_date_2014.csv', index=False)
+
