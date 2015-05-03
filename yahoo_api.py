@@ -11,7 +11,7 @@ class YahooAPI:
     access_token_lifetime = 3600
 
     # one request every X seconds to try to prevent 999 error codes
-    request_period = 0.5
+    request_period = 2
 
     def __init__(self, consumer_key, consumer_secret, access_token=None,
                  access_token_secret=None, session_handle=None):
