@@ -23,7 +23,8 @@ y = yahoo_api.YahooAPI(
 )
 
 d = resources.yr_2014
-dd = [d[0] + timedelta(days=x) for x in range((d[1]-d[0]).days + 1)]
+#dd = [d[0] + timedelta(days=x) for x in range((d[1]-d[0]).days + 1)]
+dd = [date(2014, 7, 22) + timedelta(days=x) for x in range((d[1]-date(2014, 7, 22)).days + 1)]
 
 stat_df = pandas.DataFrame()
 
@@ -35,5 +36,5 @@ for day in dd:
         df = functions.process_team_stats(raw)
         stat_df = stat_df.append(df)
 
-stat_df.to_csv('team_by_date_2014.csv', index=False)
+stat_df.to_csv('team_by_date_2014_pt2.csv', index=False)
 

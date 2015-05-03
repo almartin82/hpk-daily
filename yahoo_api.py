@@ -2,7 +2,7 @@ from rauth import OAuth1Service
 from rauth.utils import parse_utf8_qsl
 import time
 import xmltodict
-
+import sys
 
 #adapted from https://github.com/dkempiners/python-yahooapi/blob/master/yahooapi.py
 #thank you darren!
@@ -105,5 +105,7 @@ class YahooAPI:
 
     def api_query(self, request_str):
         resp = self.request(request_str)
+        if resp.status_code == 999:
+            raise Exception("got a 999 response; exceeded yahoo's rate limit.")
         return xmltodict.parse(resp.content)
 
