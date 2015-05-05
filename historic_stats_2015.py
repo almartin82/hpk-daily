@@ -22,19 +22,19 @@ y = yahoo_api.YahooAPI(
     session_handle=creds['session_handle']
 )
 
-d = resources.yr_2012
-# dd = [d[0] + timedelta(days=x) for x in range((d[1]-d[0]).days + 1)]
-dd = [date(2012, 9, 8) + timedelta(days=x) for x in range((d[1]-date(2012, 9, 8)).days + 1)]
+d = resources.yr_2011
+dd = [d[0] + timedelta(days=x) for x in range((d[1]-d[0]).days + 1)]
+# dd = [date(2012, 9, 8) + timedelta(days=x) for x in range((d[1]-date(2012, 9, 8)).days + 1)]
 
 stat_df = pandas.DataFrame()
 
 for day in dd:
     print day
-    for team in resources.hpk_teams_2012:
+    for team in resources.hpk_teams_2011:
         r = functions.make_daily_stats_req(team, day)
         raw = y.api_query(r)
         df = functions.process_team_stats(raw)
         stat_df = stat_df.append(df)
 
-stat_df.to_csv('team_by_date_2012_pt2.csv', index=False)
+stat_df.to_csv('team_by_date_2011.csv', index=False)
 
