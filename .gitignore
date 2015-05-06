@@ -62,3 +62,8 @@ target/
 
 # package specific
 credentials.yml
+.Rproj.user
+
+#R stuff
+*.Rhistory
+*.Rproj

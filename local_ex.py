@@ -1,5 +1,8 @@
 import yahoo_api
 import yaml
+import mandrill
+from time import gmtime, strftime
+import json
 
 #read in credentials
 with open("credentials.yml", 'r') as ymlfile:
@@ -18,5 +21,27 @@ y = yahoo_api.YahooAPI(
 )
 
 foo = y.request('http://fantasysports.yahooapis.com/fantasy/v2/league/346.l.49099/standings')
-
 print foo.content
+foo = y.request('http://fantasysports.yahooapis.com/fantasy/v2/league/346.l.49099/standings;date=2015-05-01')
+print foo.content
+
+foo = y.api_query('http://fantasysports.yahooapis.com/fantasy/v2/league/346.l.49099/settings')
+print json.dumps(
+    foo['fantasy_content']['league']['settings']['stat_categories']['stats'],
+    sort_keys=True, indent=2
+)
+
+
+#send receipt email to ALM
+mandrill_client = mandrill.Mandrill(creds['mandrill_key'])
+message = {
+    'from_email': 'standings-bot@hpkdiaspora.com',
+    'from_name': 'hpk standings bot',
+    'subject': 'stats update',
+    'text': 'testing, testing, time is: ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()),
+    'to': [
+        {'email': 'almartin@gmail.com',
+         'name': 'Andrew Martin',
+         'type': 'to'}]
+}
+result = mandrill_client.messages.send(message=message)
