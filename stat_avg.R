@@ -131,8 +131,11 @@ round_to_any <- function(x, accuracy, f = round) {
 ip_df <- hpk_all %>% 
   dplyr::filter(stat_name == 'IP') 
 names(ip_df)[2] <- "IP"
-ip_df$IP_round <-  round_to_any(x = as.numeric(ip_df$IP), accuracy = 1, f = floor)  
-
+ip_df$IP_round <-  round_to_any(x = as.numeric(ip_df$IP), accuracy = 1, f = ceiling)  
+#mlb codes 1 out as .1, 2 outs as .2.  replace with 0.333, 0.667
+ip_df$IP <- gsub('.1', '.333', ip_df$IP)
+ip_df$IP <- gsub('.2', '.667', ip_df$IP)
+ip_df$IP <- as.numeric(ip_df$IP)
 
 era_df <- hpk_all %>%
   dplyr::filter(stat_name == 'ERA') %>%
@@ -149,6 +152,10 @@ ip_df <- ip_df %>%
   )
 
 head(ip_df)
+
+ip_df$run_per_inning <- ip_df$ERA / 9
+ip_df$run_per_out <- ip_df$ERA / 27
+
 
 
 

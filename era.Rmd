@@ -1,0 +1,183 @@
+---
+title: "era"
+author: "Andrew Martin"
+date: "May 6, 2015"
+output: html_document
+---
+
+first, read in the data prep in the other .Rmd:
+```{r data_prep, message=FALSE, error=FALSE, warning=FALSE}
+knitr::knit('stat_avg.Rmd', tangle=TRUE)
+source('stat_avg.R')
+
+```
+
+#the problem
+we have several thousand daily observations of team earned run average for fantasy teams.  unlike real teams, innings pitched on any given day is highly variable.  sometimes, a RP will only pitch a fraction of an inning.  other times, multiple starting pitchers will throw 20 or more innings.
+here is a histogram of IP, rounded up to the nearest inning.
+
+```{r ip_histo, fig.width = 6, fig.height = 4}
+
+ggplot(
+  data = ip_df,
+  aes(x = IP_round)
+) +
+geom_histogram(binwidth = 1) +
+theme_classic()
+
+```
+
+you can see a spike for a handful of relievers around 1-3 innings; a spike for SP (plus a spare reliever or two) from 7-12 IP, and then things fall off after ~ 25 innings.
+
+when we have so many small IP totals, ERA (a rate) can be really noisy.  this is especially pronounced with ERA, because by convention it is reported as a rate projected out to 9 IP -- for instance, if you give up 2 runs in 1 inning, that's reported as ERA 18 - because a pitcher who gave up 2 runs every inning would give up 18 runs in a 9 inning game.
+
+```{r ip_era_scatter, fig.width = 8, fig.height = 5}
+ 
+ggplot(
+  data = ip_df[ip_df$ERA < 100, ],
+  aes(x = IP, y = ERA)
+) +
+geom_point(
+  shape = 1,
+  alpha = 0.2
+) + 
+theme_classic()
+
+```
+
+what I want to do is reduce that data to one dimension, so that a given team's ERA can be expressed as a percentile.  obviously, using the raw ERA data is not the way to go - a team who pitches 10 innings at an ERA of 13 is a much worse than a team that pitches 2 innings, giving up 3 runs, for an ERA of 13.5.
+
+how can we do this?  well, one way to think about the problem is that every team has some 'true', unobserved runs-per-inning (departing from the ERA convention to simplify things here), and the results that day are a noisy realization of that true skill.  taking my inspiration from the Karl Broman socks [article](http://www.sumsar.net/blog/2014/10/tiny-data-and-the-socks-of-karl-broman/) (SO good), we start with a generative model that matches our data,
+
+In this case, we're going to have really good priors - we'll take them from our observed data.  We need a prior for the mean and standard deviation runs allowed per out.
+
+let's look at that distribution
+
+```{r per_out, fig.width = 6, fig.height = 4}
+
+ggplot(
+  data = ip_df %>% dplyr::filter(IP >= 1),
+  aes(x = run_per_out)
+) +
+geom_histogram() +
+theme_classic()
+
+```
+
+at first glance - this is count data, so we can model runs allowed as [independent poisson variables](http://wwwf.imperial.ac.uk/~ejm/M3S4/Problems/football.pdf)! 
+
+but that's not the right move here.  recall from above that the data here mixes observations of different durations.  the right way, I think, to model this is to bin by IP, and then see if the mean and sd converge as IP increases.
+
+```{r mean_conv}
+
+ip_sum <- ip_df %>%
+  dplyr::group_by(IP) %>%
+  dplyr::summarize(
+    n = n(),
+    mean_run_per_out = mean(run_per_out, na.rm = TRUE),
+    sd_run_per_out = sd(run_per_out, na.rm = TRUE)
+  )
+
+ggplot(
+  data = ip_sum %>% dplyr::filter(n >= 25),
+  aes(
+    x = IP
+  )
+) +
+geom_line(
+  aes(y = mean_run_per_out), 
+  color = 'blue'
+) +
+geom_line(
+  aes(y = sd_run_per_out), 
+  color = 'red'
+) +
+theme_bw() +
+labs(y = 'value per out', x = 'IP')
+
+```
+
+blue is mean runs allowed, red is standard deviation.  as expectd, the values definitely stabilize as IP increase.  we'll use those as priors in our model.
+
+let's look at the full distribution:
+
+```{r prior}
+
+library(moments)
+
+prior_df <- ip_df %>%
+  dplyr::filter(
+    IP_round >= 8  & !is.na(run_per_out)
+  ) %>% as.data.frame()
+
+ggplot(
+  data = prior_df,
+  aes(
+    x = run_per_out
+  )
+) +
+geom_histogram() +
+theme_bw()
+
+```
+
+sort of fell down the R rabbit hole of fitting distributions here.  this looks like a lognormal distribution, but there are zeros?
+
+what if we move the zeros to half of the [smallest positive observation](http://stats.stackexchange.com/a/16867/3320), and then refit?
+
+```{r kill_zeros}
+
+#minimum non-zero value os 0.0133
+prior_df %>% dplyr::filter(
+  run_per_out > 0  
+) %>% dplyr::summarize(
+  min_run = min(run_per_out)
+)
+
+prior_df[prior_df$run_per_out == 0, 'run_per_out'] <- 0.0133 / 2
+
+library(fitdistrplus)
+fit <- fitdist(prior_df$run_per_out, "gamma")
+plot(fit)
+```
+
+ok so _definitely_ a gamma distribution.  [this](https://stats.stackexchange.com/questions/72381/gamma-vs-lognormal-distributions) SO answer 
+>The lognormal distribution arises when the logarithm of X is normally distributed, for example, if X is the product of very many small factors. If X is gamma distributed, it is the sum of many exponentially-distributed variates. For example, the waiting time for many events of a Poisson process.
+
+which makes sense - our data is, indeed, the sum of a Poisson process.
+
+now we want to simulate draws from our data:
+```{r sims}
+
+hist(rgamma(10000, coef(fit)[1], coef(fit)[2]))
+
+```
+
+ok, so that's our prior for true ERA.  but remember the rub of our problem is that we often don't see enough of this data to see the true ERA - lots of our samples have only one or two IP.  so now we'll build a generative model, using this data and distribution of IPs.  with that generative model we can do approximate bayesian calculation to get an _estimate_ of the true ERA, given our imperfect, noisy data.
+
+rather than try to simulate the oddly shaped IP distribution (some weird mixture of gaussians?), we'll just take random draws from the ~6700 observed values.
+
+```{r gen}
+
+valid_ip <- ip_df %>% dplyr::filter(IP > 0)
+
+era_sim <- replicate(100000, {
+  sim_run_per_out <- rgamma(1, coef(fit)[1], coef(fit)[2])
+  sim_true_era <- sim_run_per_out * 27
+  sim_outs_recorded <- round(sample_n(valid_ip, 1)$IP * 3, 0)
+  
+  sim_runs <- rpois(sim_outs_recorded, sim_run_per_out)
+  reported_era <- (sum(sim_runs) / sim_outs_recorded) * 27
+  
+  c(true_era = sim_true_era, IP = sim_outs_recorded / 3, reported_era = reported_era)
+})  
+era_sim <- t(era_sim)
+head(era_sim)
+
+p_sim <- density(era_sim[, 3]) 
+plot(p_sim) 
+
+p_true <- density(valid_ip$ERA)
+lines(p_true, col='red', new = FALSE)
+
+```

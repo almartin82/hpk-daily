@@ -28,6 +28,7 @@ head(hpk_all)
 
 clean 
 
+H/AB (stat_id 60) is listed as a string.  convert to decimal.
 ```{r clean}
 
 hpk1 <-  hpk_all %>%
@@ -49,7 +50,7 @@ hpk_all$year <- as.numeric(format(hpk_all$date, "%Y"))
 
 ```
 
-label categories
+add stat_name.  these are looked up from the yahoo api
 
 ```{r labels}
 
@@ -67,7 +68,6 @@ hpk_all <- hpk_all %>%
 ```
 
 averages by stat:
-
 
 ```{r avgs}
 require(Cairo)
@@ -113,6 +113,7 @@ for (i in unique(stat_names$stat_name)) {
   by_team[[i]] <- p2
 }
 
+#print all_league
 Cairo(
   width = 14, height = 8.5
  ,file = 'charts/all_league.pdf'
@@ -125,8 +126,9 @@ Cairo(
 dev.off()
 
 
+#print by_team
 Cairo(
-  width = 8.5, height = 11
+  width = 14, height = 8.5
  ,file = 'charts/by_team.pdf'
  ,type="pdf"
  ,bg = "transparent"
@@ -137,7 +139,43 @@ dev.off()
 
 ```
 
+era data prep
+```{r era_prep}
 
+round_to_any <- function(x, accuracy, f = round) {
+  f(x / accuracy) * accuracy
+}
+
+ip_df <- hpk_all %>% 
+  dplyr::filter(stat_name == 'IP') 
+names(ip_df)[2] <- "IP"
+ip_df$IP_round <-  round_to_any(x = as.numeric(ip_df$IP), accuracy = 1, f = ceiling)  
+#mlb codes 1 out as .1, 2 outs as .2.  replace with 0.333, 0.667
+ip_df$IP <- gsub('.1', '.333', ip_df$IP)
+ip_df$IP <- gsub('.2', '.667', ip_df$IP)
+ip_df$IP <- as.numeric(ip_df$IP)
+
+era_df <- hpk_all %>%
+  dplyr::filter(stat_name == 'ERA') %>%
+  dplyr::select(
+    team_key, date, value
+  )
+names(era_df)[3] <- 'ERA'
+era_df$ERA <- as.numeric(era_df$ERA)
+
+ip_df <- ip_df %>%
+  dplyr::inner_join(
+    era_df,
+    by = c("team_key" = "team_key", "date" = "date")
+  )
+
+head(ip_df)
+
+ip_df$run_per_inning <- ip_df$ERA / 9
+ip_df$run_per_out <- ip_df$ERA / 27
+
+
+```
 
 weird facet plot
 
