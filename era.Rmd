@@ -5,9 +5,10 @@ date: "May 6, 2015"
 output: html_document
 ---
 
-first, read in the data prep in the other .Rmd:
-```{r data_prep, message=FALSE, error=FALSE, warning=FALSE}
-knitr::knit('stat_avg.Rmd', tangle=TRUE)
+(all of the data prep for this document can be found in stat_avg.Rmd)
+
+```{r data_prep, message=FALSE, error=FALSE, warning=FALSE, include=FALSE}
+#knitr::knit('stat_avg.Rmd', tangle=TRUE)
 source('stat_avg.R')
 
 ```
@@ -141,8 +142,8 @@ fit <- fitdist(prior_df$run_per_out, "gamma")
 plot(fit)
 ```
 
-ok so _definitely_ a gamma distribution.  [this](https://stats.stackexchange.com/questions/72381/gamma-vs-lognormal-distributions) SO answer 
->The lognormal distribution arises when the logarithm of X is normally distributed, for example, if X is the product of very many small factors. If X is gamma distributed, it is the sum of many exponentially-distributed variates. For example, the waiting time for many events of a Poisson process.
+ok so _definitely_ a gamma distribution.  [this](https://stats.stackexchange.com/questions/72381/gamma-vs-lognormal-distributions) SO answer gives a reason: 
+> The lognormal distribution arises when the logarithm of X is normally distributed, for example, if X is the product of very many small factors. If X is gamma distributed, it is the sum of many exponentially-distributed variates. For example, the waiting time for many events of a Poisson process.
 
 which makes sense - our data is, indeed, the sum of a Poisson process.
 
@@ -157,11 +158,11 @@ ok, so that's our prior for true ERA.  but remember the rub of our problem is th
 
 rather than try to simulate the oddly shaped IP distribution (some weird mixture of gaussians?), we'll just take random draws from the ~6700 observed values.
 
-```{r gen}
+```{r gen, cache = TRUE}
 
 valid_ip <- ip_df %>% dplyr::filter(IP > 0)
 
-era_sim <- replicate(100000, {
+era_sim <- replicate(1000000, {
   sim_run_per_out <- rgamma(1, coef(fit)[1], coef(fit)[2])
   sim_true_era <- sim_run_per_out * 27
   sim_outs_recorded <- round(sample_n(valid_ip, 1)$IP * 3, 0)
@@ -181,3 +182,60 @@ p_true <- density(valid_ip$ERA)
 lines(p_true, col='red', new = FALSE)
 
 ```
+
+now let's look at some real data and see how the simulation can help infer the true rates behind the noisy data.
+
+```{r real_data}
+
+true_ERA_est <- function(ip_in, reported_ERA_in) {
+  
+  sim_df <- era_sim %>% as.data.frame () %>% dplyr::filter(round(IP, 1) == round(ip_in))
+  
+  #perfectly matching rows
+  exact_df <- sim_df %>% dplyr::filter(reported_era == reported_ERA_in)
+  
+  #print(nrow(sim_df))
+  #print(nrow(exact_df))
+  
+  #if there are 1000 perfect matches, roll with that.  if not, take the 1000 closest matches
+  #to reported era (likely within a few decimals)
+  if (nrow(exact_df) >= 1000) {
+    true_mean <- mean(exact_df$true_era)
+    hist(exact_df$true_era)
+  } else {
+    exact_df <- exact_df %>% dplyr::mutate(
+      diff = reported_era - reported_ERA_in
+    ) %>%
+    dplyr::mutate(
+      diff_rank = rank(diff, ties.method = 'first')
+    ) %>%
+    as.data.frame()
+    
+    true_mean <- mean(exact_df[exact_df$diff_rank <= 1000, 'true_era'])
+  }
+ 
+  return(round(true_mean, 2)) 
+}
+
+```
+
+# let's use it!
+
+the mean of `true_era` in our simulations is *`r round(mean(era_sim[1, ], na.rm=TRUE),2)`*.  so before we have any data at all, that's our prior about what we think a pitcher's ERA might be.  what is our belief about `true_era` after a number of common outcomes - a pitcher pitches for 1.0 innings, and gives up (respectively) 0, 1, 2, and 3 runs?
+
+```{r use_sim}
+
+true_ERA_est(1, 0)
+true_ERA_est(1, 9)
+true_ERA_est(1, 18)
+true_ERA_est(1, 27)
+
+```
+
+conditional on those 4 observations, our belief about the true ERA that produced that data would be `r true_ERA_est(1, 0)`, `r true_ERA_est(1, 9)`, `r true_ERA_est(1, 18)`, and `r  true_ERA_est(1, 27)` respectively.  you can see from the distributions for each call that there are a _range_ of possible true ERAs consistent with that data; the mean of that distribution represents our best guess, given the data.
+
+Now we can apply our `true_ERA_est` function to all of our historic data:
+(to come)
+
+
+
