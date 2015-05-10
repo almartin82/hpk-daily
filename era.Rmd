@@ -162,7 +162,7 @@ rather than try to simulate the oddly shaped IP distribution (some weird mixture
 
 valid_ip <- ip_df %>% dplyr::filter(IP > 0)
 
-era_sim <- replicate(1000000, {
+era_sim <- replicate(10000000, {
   sim_run_per_out <- rgamma(1, coef(fit)[1], coef(fit)[2])
   sim_true_era <- sim_run_per_out * 27
   sim_outs_recorded <- round(sample_n(valid_ip, 1)$IP * 3, 0)
@@ -181,6 +181,8 @@ plot(p_sim)
 p_true <- density(valid_ip$ERA)
 lines(p_true, col='red', new = FALSE)
 
+unique(era_sim[,3])
+
 ```
 
 now let's look at some real data and see how the simulation can help infer the true rates behind the noisy data.
@@ -188,22 +190,27 @@ now let's look at some real data and see how the simulation can help infer the t
 ```{r real_data}
 
 true_ERA_est <- function(ip_in, reported_ERA_in) {
+
+  if(is.na(ip_in)) {
+    return(NA)
+  }
   
-  sim_df <- era_sim %>% as.data.frame () %>% dplyr::filter(round(IP, 1) == round(ip_in))
+  sim_df <- era_sim %>% as.data.frame()
+  sim_df <- sim_df[round(sim_df$IP, 1) == round(ip_in, 1), ]
   
   #perfectly matching rows
-  exact_df <- sim_df %>% dplyr::filter(reported_era == reported_ERA_in)
+  exact_df <- sim_df %>% dplyr::filter(abs(reported_era - reported_ERA_in) < 0.1)
   
   #print(nrow(sim_df))
-  #print(nrow(exact_df))
+  print(nrow(exact_df))
   
   #if there are 1000 perfect matches, roll with that.  if not, take the 1000 closest matches
   #to reported era (likely within a few decimals)
-  if (nrow(exact_df) >= 1000) {
+  if (nrow(exact_df) >= 100) {
     true_mean <- mean(exact_df$true_era)
-    hist(exact_df$true_era)
+    #hist(exact_df$true_era)
   } else {
-    exact_df <- exact_df %>% dplyr::mutate(
+    exact_df <- sim_df %>% dplyr::mutate(
       diff = reported_era - reported_ERA_in
     ) %>%
     dplyr::mutate(
@@ -211,7 +218,8 @@ true_ERA_est <- function(ip_in, reported_ERA_in) {
     ) %>%
     as.data.frame()
     
-    true_mean <- mean(exact_df[exact_df$diff_rank <= 1000, 'true_era'])
+    true_mean <- mean(exact_df[exact_df$diff_rank <= 100, 'true_era'])
+    #hist(exact_df[exact_df$diff_rank <= 100, 'true_era'])
   }
  
   return(round(true_mean, 2)) 
@@ -232,10 +240,17 @@ true_ERA_est(1, 27)
 
 ```
 
-conditional on those 4 observations, our belief about the true ERA that produced that data would be `r true_ERA_est(1, 0)`, `r true_ERA_est(1, 9)`, `r true_ERA_est(1, 18)`, and `r  true_ERA_est(1, 27)` respectively.  you can see from the distributions for each call that there are a _range_ of possible true ERAs consistent with that data; the mean of that distribution represents our best guess, given the data.
+conditional on those 4 observations, our belief about the true ERA that produced that data would be *`r true_ERA_est(1, 0)`*, *`r true_ERA_est(1, 9)`*, *`r true_ERA_est(1, 18)`*, and *`r  true_ERA_est(1, 27)`* respectively.  you can see from the distributions for each call that there are a _range_ of possible true ERAs consistent with that data; the mean of that distribution represents our best guess, given the data.
 
 Now we can apply our `true_ERA_est` function to all of our historic data:
-(to come)
+```{r over_all}
 
+for (i in 1:nrow(ip_df)) {
+  print(i)
+  ip_df$true_ERA <- true_ERA_est(ip_df[i, 'IP'], ip_df[i, 'ERA'])
+}
+
+head(ip_df)
+```
 
 
