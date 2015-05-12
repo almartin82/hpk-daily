@@ -3,6 +3,11 @@ import yaml
 import mandrill
 from time import gmtime, strftime
 import json
+import functions
+import daily_stats
+import pandas as pd
+from datetime import date
+import resources
 
 #read in credentials
 with open("credentials.yml", 'r') as ymlfile:
@@ -19,6 +24,16 @@ y = yahoo_api.YahooAPI(
     access_token_secret=creds['access_token_secret'],
     session_handle=creds['session_handle']
 )
+
+stat_df = pd.DataFrame()
+
+for i in resources.hpk_teams_cur:
+    yesterday = date.fromordinal(date.today().toordinal()-1)
+    r = functions.make_daily_stats_req(i, yesterday)
+    raw = y.api_query(r)
+    df = functions.process_team_stats(raw)
+    stat_df = stat_df.append(df)
+
 
 foo = y.request('http://fantasysports.yahooapis.com/fantasy/v2/league/346.l.49099/standings')
 print foo.content

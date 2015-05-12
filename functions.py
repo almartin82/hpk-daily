@@ -1,4 +1,6 @@
-import pandas
+import pandas as pd
+import resources
+import os
 
 def make_daily_stats_req(team, date):
     base = "http://fantasysports.yahooapis.com/fantasy/v2/team/"
@@ -6,11 +8,29 @@ def make_daily_stats_req(team, date):
     final = base + team + sub_resource + str(date)
     return final
 
+
+def process_managers(managers):
+    #if dict
+    if isinstance(managers, dict):
+        manager = managers['nickname']
+        return manager
+    #if list
+    manager = []
+    for i in managers:
+        manager.append(i['nickname'])
+    manager = ', '.join(manager)
+    return manager
+
+
 def process_team_stats(raw):
     stats = raw['fantasy_content']['team']['team_stats']['stats']['stat']
-    df = pandas.DataFrame.from_dict(stats)
+    df = pd.DataFrame.from_dict(stats)
     df['date'] = raw['fantasy_content']['team']['team_stats']['date']
     df['team_key'] = raw['fantasy_content']['team']['team_key']
+
+    managers = process_managers(raw['fantasy_content']['team']['managers']['manager'])
+    df['manager'] = managers
+    df = pd.concat([df, resources.stat_names], axis=1, join='inner')
     return df
 
 def data_to_csv(target_dir, data_to_write, desired_name):
