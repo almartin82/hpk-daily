@@ -202,7 +202,7 @@ true_ERA_est <- function(ip_in, reported_ERA_in) {
   exact_df <- sim_df %>% dplyr::filter(abs(reported_era - reported_ERA_in) < 0.1)
   
   #print(nrow(sim_df))
-  print(nrow(exact_df))
+  #print(nrow(exact_df))
   
   #if there are 1000 perfect matches, roll with that.  if not, take the 1000 closest matches
   #to reported era (likely within a few decimals)
@@ -251,6 +251,8 @@ for (i in 1:nrow(ip_df)) {
 }
 
 head(ip_df)
+
+write.csv(ip_df, 'ip_data.csv')
 ```
 
 
