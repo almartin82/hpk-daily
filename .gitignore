@@ -67,3 +67,4 @@ credentials.yml
 #R stuff
 *.Rhistory
 *.Rproj
+.RData

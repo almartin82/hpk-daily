@@ -64,6 +64,7 @@ hpk_all <- hpk_all %>%
     stat_names
   )
 
+write.csv(hpk_all, 'data\\team_by_date_all.csv')
 
 ```
 
