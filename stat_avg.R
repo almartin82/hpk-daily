@@ -49,6 +49,7 @@ hpk_all <- hpk_all %>%
     stat_names
   )
 
+write.csv(hpk_all, 'data\\team_by_date_all.csv')
 
 
 
@@ -145,9 +146,22 @@ era_df <- hpk_all %>%
 names(era_df)[3] <- 'ERA'
 era_df$ERA <- as.numeric(era_df$ERA)
 
+whip_df <- hpk_all %>%
+  dplyr::filter(stat_name == 'WHIP') %>%
+  dplyr::select(
+    team_key, date, value
+  )
+names(whip_df)[3] <- 'WHIP'
+whip_df$WHIP<- as.numeric(whip_df$WHIP)
+
+
 ip_df <- ip_df %>%
   dplyr::inner_join(
     era_df,
+    by = c("team_key" = "team_key", "date" = "date")
+  ) %>%
+  dplyr::inner_join(
+    whip_df,
     by = c("team_key" = "team_key", "date" = "date")
   )
 
@@ -155,6 +169,7 @@ head(ip_df)
 
 ip_df$run_per_inning <- ip_df$ERA / 9
 ip_df$run_per_out <- ip_df$ERA / 27
+ip_df$wh_per_out <- ip_df$WHIP / 3
 
 
 
