@@ -113,7 +113,7 @@ rather than try to simulate the oddly shaped IP distribution (some weird mixture
 
 valid_ip <- ip_df %>% dplyr::filter(IP > 0)
 
-wh_sim <- replicate(10000000, {
+wh_sim <- replicate(1000000, {
   sim_wh_per_out <- rgamma(1, coef(fit)[1], coef(fit)[2])
   sim_true_whip <- sim_wh_per_out * 3
   sim_outs_recorded <- round(sample_n(valid_ip, 1)$IP * 3, 0)
@@ -165,7 +165,7 @@ true_WHIP_est <- function(ip_in, reported_WHIP_in) {
 
 # let's use it!
 
-the mean of `true_era` in our simulations is *`r round(mean(era_sim[1, ], na.rm=TRUE),2)`*.  so before we have any data at all, that's our prior about what we think a pitcher's ERA might be.  what is our belief about `true_era` after a number of common outcomes - a pitcher pitches for 1.0 innings, and gives up (respectively) 0, 1, 2, and 3 runs?
+the mean of `true_era` in our simulations is *`r round(mean(wh_sim[1, ], na.rm=TRUE),2)`*.  so before we have any data at all, that's our prior about what we think a pitcher's ERA might be.  what is our belief about `true_era` after a number of common outcomes - a pitcher pitches for 1.0 innings, and gives up (respectively) 0, 1, 2, and 3 runs?
 
 ```{r use_sim}
 
