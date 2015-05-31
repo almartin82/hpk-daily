@@ -3,6 +3,7 @@ import scipy.stats as stats
 
 fbb_stats = pd.read_csv('data\\team_by_date_all.csv')
 era = pd.read_csv('data\\era_sim.csv')
+whip = pd.read_csv('data\\w)
 
 
 def stat_percentile(stat_name, stat_value, IP=None):
