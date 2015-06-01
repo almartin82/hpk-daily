@@ -1,3 +1,4 @@
 requests==2.4.0
 rauth==0.6.2
 pandas==0.14.1
+scipy==0.15.1
