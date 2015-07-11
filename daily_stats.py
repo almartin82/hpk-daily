@@ -88,3 +88,6 @@ for i in fbb_stats['date'].unique():
 
 eras = pd.DataFrame(true_eras)
 whips = pd.DataFrame(true_whips)
+eras.rename(columns={0: 'true_era'}, inplace=True)
+eras.columns
+eras.to_csv('era_hist.csv')

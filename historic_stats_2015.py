@@ -30,7 +30,7 @@ stat_df = pandas.DataFrame()
 
 for day in dd:
     print day
-    for team in resources.hpk_teams_2015:
+    for team in resources.hpk_teams_cur:
         r = functions.make_daily_stats_req(team, day)
         raw = y.api_query(r)
         df = functions.process_team_stats(raw)

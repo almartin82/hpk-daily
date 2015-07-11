@@ -45,8 +45,6 @@ hpk_all <- hpk_all %>%
     stat_names
   )
 
-write.csv(hpk_all, '..\\data\\team_by_date_all.csv')
-
 
 ## ----avgs----------------------------------------------------------------
 require(Cairo)
@@ -186,4 +184,18 @@ theme(
 ) +
 theme_classic()
 
+
+## ------------------------------------------------------------------------
+
+ip_slim <- ip_df %>%
+  dplyr::select(
+    team_key, date, IP  
+  )
+
+hpk_all <- hpk_all %>%
+  dplyr::inner_join(
+    ip_slim
+  )
+
+write.csv(hpk_all, '..\\data\\team_by_date_all.csv')
 

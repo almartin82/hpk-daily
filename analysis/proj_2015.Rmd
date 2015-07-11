@@ -1,0 +1,20 @@
+---
+title: "proj_2015"
+author: "Andrew Martin"
+date: "July 11, 2015"
+output: html_document
+---
+
+load the data from previous analysis
+
+```{r data_prep, message=FALSE, error=FALSE, warning=FALSE, include=FALSE}
+knitr::knit('stat_avg.Rmd', tangle=TRUE)
+source('stat_avg.R')
+
+```
+
+use dplyr windowing to get rolling n-day averages
+
+```
+
+```

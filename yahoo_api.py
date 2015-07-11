@@ -1,8 +1,7 @@
-from rauth import OAuth1Service
+import rauth
 from rauth.utils import parse_utf8_qsl
 import time
 import xmltodict
-import sys
 
 #adapted from https://github.com/dkempiners/python-yahooapi/blob/master/yahooapi.py
 #thank you darren!
@@ -25,7 +24,7 @@ class YahooAPI:
                 "session_handle": session_handle
             }
 
-        self.oauth = OAuth1Service(
+        self.oauth = rauth.OAuth1Service(
             consumer_key=consumer_key,
             consumer_secret=consumer_secret,
             name="yahoo",
