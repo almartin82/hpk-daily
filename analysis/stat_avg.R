@@ -6,10 +6,11 @@ library(readr)
 ## ----data----------------------------------------------------------------
 
 hpk_15 <- readr::read_csv(file = '..\\data\\team_by_date_2015.csv', na = "-")
+hpk_15_slim <- hpk_15[, c(1:4)]
 hpk_14 <- readr::read_csv(file = '..\\data\\team_by_date_2014.csv', na = "-")
 hpk_13 <- readr::read_csv(file = '..\\data\\team_by_date_2013.csv', na = "-")
 hpk_12 <- readr::read_csv(file = '..\\data\\team_by_date_2012.csv', na = "-")
-hpk_all <- rbind(hpk_15, hpk_14, hpk_13, hpk_12) %>% as.data.frame()
+hpk_all <- rbind(hpk_15_slim, hpk_14, hpk_13, hpk_12) %>% as.data.frame()
 
 head(hpk_all)
 

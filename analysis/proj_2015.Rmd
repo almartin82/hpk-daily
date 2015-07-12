@@ -20,25 +20,40 @@ source('stat_avg.R')
 
 ```
 
-
-
 use windowing to get rolling n-day averages
 
 ```{r windows}
 
 hpk_munge <- hpk_all %>%
-  dplyr::filter(!is.na(value) & year < 2015) %>%
+  dplyr::filter(!is.na(value)) %>%
   group_by(year, stat_id, team_key) %>%
-  arrange(year, date) %>%
+  arrange(year, team_key, stat_id, date) %>%
   mutate(
-    foo = zoo::rollmean(x = as.numeric(value), k = 21, align = "right", na.pad = TRUE)
+    rolling_3 = zoo::rollmean(x = as.numeric(value), k = 3, align = "right", na.pad = TRUE),
+    rolling_5 = zoo::rollmean(x = as.numeric(value), k = 5, align = "right", na.pad = TRUE),
+    rolling_7 = zoo::rollmean(x = as.numeric(value), k = 7, align = "right", na.pad = TRUE),
+    rolling_10 = zoo::rollmean(x = as.numeric(value), k = 10, align = "right", na.pad = TRUE),  
+    rolling_15 = zoo::rollmean(x = as.numeric(value), k = 15, align = "right", na.pad = TRUE),
+    rolling_20 = zoo::rollmean(x = as.numeric(value), k = 20, align = "right", na.pad = TRUE),    
+    rolling_25 = zoo::rollmean(x = as.numeric(value), k = 25, align = "right", na.pad = TRUE),    
+    rolling_30 = zoo::rollmean(x = as.numeric(value), k = 30, align = "right", na.pad = TRUE),
+    rolling_35 = zoo::rollmean(x = as.numeric(value), k = 35, align = "right", na.pad = TRUE),    
+    rolling_40 = zoo::rollmean(x = as.numeric(value), k = 40, align = "right", na.pad = TRUE),    
+    rolling_45 = zoo::rollmean(x = as.numeric(value), k = 45, align = "right", na.pad = TRUE),
+    rolling_50 = zoo::rollmean(x = as.numeric(value), k = 50, align = "right", na.pad = TRUE),    
   )
 
+
+```
+
+
+```{r ex_chart}
+
 ggplot(
-  data = hpk_munge %>% dplyr::filter(stat_name == 'RBI' & year == 2014),
+  data = hpk_munge %>% dplyr::filter(stat_name == 'RBI' & year == 2015),
   aes(
     x = date,
-    y = foo,
+    y = rolling_avg,
     group = team_key,
     color = team_key
   )
@@ -49,7 +64,5 @@ geom_point(
 geom_line() +
 theme_bw()
 
-+
-facet_grid(year ~ .)
-
 ```
+

@@ -9,6 +9,22 @@ def make_daily_stats_req(team, date):
     return final
 
 
+def make_owner_details_req(team_key):
+    base = "http://fantasysports.yahooapis.com/fantasy/v2/team/"
+    final = base + team_key
+    return final
+
+
+def process_owner_details(raw):
+    owner = raw['fantasy_content']['team']
+    #dont need these
+    owner.pop("team_logos", None)
+    owner.pop("roster_adds", None)
+    owner['managers'] = process_managers(owner['managers']['manager'])
+    df = pd.DataFrame.from_dict(owner)
+    return df
+
+
 def process_managers(managers):
     #if dict
     if isinstance(managers, dict):

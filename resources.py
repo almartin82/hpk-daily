@@ -1,10 +1,12 @@
 from datetime import date
 import pandas as pd
-###
+
+### STATS and IDs
 stat_names = pd.DataFrame(
     {'stat_id': [60, 7, 13, 16, 23, 4, 50, 28, 32, 42, 26, 27],
      'stat_name': ['AVG', 'R', 'RBI', 'SB', 'TB', 'OBP', 'IP', 'W', 'SV', 'K', 'ERA', 'WHIP']}
 )
+
 
 #### YAHOO TEAMS ####
 #current yahoo codes
@@ -75,6 +77,8 @@ hpk_teams_2005 = [
     '113.l.58563.t.1', '113.l.58563.t.2', '113.l.58563.t.3',
     '113.l.58563.t.4', '113.l.58563.t.5', '113.l.58563.t.6',
     '113.l.58563.t.7', '113.l.58563.t.8', '113.l.58563.t.9']
+
+all_hpk_teams = hpk_teams_cur + hpk_teams_2014 + hpk_teams_2013 + hpk_teams_2012 + hpk_teams_2011 + hpk_teams_2010 + hpk_teams_2009 + hpk_teams_2008 + hpk_teams_2007 + hpk_teams_2006 + hpk_teams_2005
 
 #### START/END YEARS ####
 yr_2015 = [date(2015, 4, 05), date.today()]
