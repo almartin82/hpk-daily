@@ -5,6 +5,13 @@ date: "July 11, 2015"
 output: html_document
 ---
 
+
+libraries etc
+```{r lib}
+library(dplyr)
+library(zoo)
+```
+
 load the data from previous analysis
 
 ```{r data_prep, message=FALSE, error=FALSE, warning=FALSE, include=FALSE}
@@ -13,8 +20,36 @@ source('stat_avg.R')
 
 ```
 
-use dplyr windowing to get rolling n-day averages
 
-```
+
+use windowing to get rolling n-day averages
+
+```{r windows}
+
+hpk_munge <- hpk_all %>%
+  dplyr::filter(!is.na(value) & year < 2015) %>%
+  group_by(year, stat_id, team_key) %>%
+  arrange(year, date) %>%
+  mutate(
+    foo = zoo::rollmean(x = as.numeric(value), k = 21, align = "right", na.pad = TRUE)
+  )
+
+ggplot(
+  data = hpk_munge %>% dplyr::filter(stat_name == 'RBI' & year == 2014),
+  aes(
+    x = date,
+    y = foo,
+    group = team_key,
+    color = team_key
+  )
+) +
+geom_point(
+  alpha = 0.1
+) +
+geom_line() +
+theme_bw()
+
++
+facet_grid(year ~ .)
 
 ```
