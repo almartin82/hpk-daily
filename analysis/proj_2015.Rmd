@@ -40,9 +40,8 @@ hpk_munge <- hpk_all %>%
     rolling_35 = zoo::rollmean(x = as.numeric(value), k = 35, align = "right", na.pad = TRUE),    
     rolling_40 = zoo::rollmean(x = as.numeric(value), k = 40, align = "right", na.pad = TRUE),    
     rolling_45 = zoo::rollmean(x = as.numeric(value), k = 45, align = "right", na.pad = TRUE),
-    rolling_50 = zoo::rollmean(x = as.numeric(value), k = 50, align = "right", na.pad = TRUE),    
+    rolling_50 = zoo::rollmean(x = as.numeric(value), k = 50, align = "right", na.pad = TRUE)    
   )
-
 
 ```
 
@@ -50,19 +49,46 @@ hpk_munge <- hpk_all %>%
 ```{r ex_chart}
 
 ggplot(
-  data = hpk_munge %>% dplyr::filter(stat_name == 'RBI' & year == 2015),
+  data = hpk_munge %>% dplyr::filter(stat_name == 'TB' & year == 2015 & team_key %in% c('346.l.49099.t.8', '346.l.49099.t.3')),
   aes(
     x = date,
-    y = rolling_avg,
     group = team_key,
-    color = team_key
+    color = team_key,
+    size = team_key
   )
 ) +
-geom_point(
-  alpha = 0.1
-) +
-geom_line() +
+geom_line(
+  aes(y = rolling_7),
+  color = 'red'
+) +  
+geom_line(
+  aes(y = rolling_15),
+  color = 'orange'
+) +  
+geom_line(
+  aes(y = rolling_20),
+  color = 'blue'
+) +  
 theme_bw()
 
 ```
 
+
+
+```{r ex_chart}
+
+ggplot(
+  data = hpk_munge %>% dplyr::filter(stat_name == 'TB' & year == 2015 ),
+  aes(
+    x = date,
+    y = rolling_10,
+    group = team_key,
+    color = team_key
+  )
+) + 
+geom_line(
+  smooth = 2
+) +
+theme_bw()
+
+```

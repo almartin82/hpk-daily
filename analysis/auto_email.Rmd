@@ -1,0 +1,113 @@
+---
+title: "auto_email"
+author: "Andrew Martin"
+date: "July 13, 2015"
+output: html_document
+---
+
+libraries etc
+```{r lib}
+library(readr)
+library(dplyr)
+library(zoo)
+```
+
+read the csvs
+```{r csv, cache=FALSE}
+
+hpk_cur <- readr::read_csv(file = "http://hpk.s3-website-us-east-1.amazonaws.com/hpk_2015.csv", na = "-")
+
+hpk_hist <- readr::read_csv(file = "http://hpk.s3-website-us-east-1.amazonaws.com/hpk_historic.csv")
+
+hpk_hist_clean <- hpk_hist[!is.na(hpk_hist$value), ]
+```
+
+cleaning functions
+```{r clean}
+
+clean_cols <- function(df) {
+  df <- as.data.frame(df)
+  return(df[, c(-6)])
+}
+
+
+clean_rows <- function(df) {
+  return(df[!is.na(df$value), ])
+}
+
+
+clean_h <- function(df) {
+  
+  hpk1 <- df %>% dplyr::filter(!stat_id == 60)
+  
+  hpk2 <- df %>% dplyr::filter(stat_id == 60) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(
+      value = eval(parse(text=value))
+    )
+  
+  hpk2$value <- round(hpk2$value, 5)
+    
+  cleaned <- rbind(hpk1, hpk2)
+  
+  cleaned$value <- as.numeric(cleaned$value)
+  
+  return(cleaned)
+}
+
+```
+
+cleaning script
+
+```{r clean_df}
+
+hpk_clean <- hpk_cur %>%
+  clean_cols %>%
+  clean_rows %>%
+  clean_h
+
+```
+
+## rolling averages
+
+```{r helper_function}
+
+make_rolling <- function(df, high_n = 60) {
+  
+  df <- df %>%
+    dplyr::group_by(stat_id, team_key) %>%
+    dplyr::arrange(team_key, stat_id, date)
+  
+  for (i in c(2:high_n)) {
+    df <- df %>%
+      dplyr::mutate(
+        foo = rollmeanr(x = value, k = quote(i), na.pad = TRUE)
+      )
+    names(df)[names(df)=='foo'] <- paste0('roll_', i)
+  }
+  
+  return(df)
+}
+
+```
+
+now do it for current data 
+
+```{r cur_roll}
+
+hpk_clean <- make_rolling(hpk_clean)
+
+```
+
+ok!  now that we have rolling data, compare to historic dist
+
+
+
+# one time only 
+
+```{r hist_roll, eval = FALSE}
+
+foo <- make_rolling(hpk_hist_clean)
+
+write.csv(foo, file='historic_rolling.csv')
+```
