@@ -1,0 +1,50 @@
+---
+title: "one_off"
+author: "Andrew Martin"
+date: "July 13, 2015"
+output: html_document
+---
+
+libraries etc
+```{r lib}
+library(readr)
+library(dplyr)
+library(zoo)
+```
+
+read the csvs
+```{r csv, cache=FALSE}
+
+hpk_hist <- readr::read_csv(file = "http://hpk.s3-website-us-east-1.amazonaws.com/hpk_historic.csv")
+
+```
+
+cleaning functions are in auto_email.Rmd
+
+# one time only 
+
+```{r hist_roll, eval = FALSE}
+hpk_hist_clean <- hpk_hist[!is.na(hpk_hist$value), ]
+hpk_hist_clean <- true_era_whip(hpk_hist)
+
+foo <- make_rolling(hpk_hist_clean[, 2:11])
+
+#write.csv(foo, file='hpk_historic_rolling.csv')
+
+hpk_hist_rolling_slim <- foo[, c(1:10, 16, 23, 30, 37)]
+
+write.csv(hpk_hist_rolling_slim, 'hpk_historic.csv')
+
+```
+
+this didnt work because it wasnt sorted!
+
+```{r wat}
+hpk_hist_clean <- hpk_hist_clean %>%
+  dplyr::mutate(
+    roll_7 = rollmeanr(x = value, k = 7, na.pad = TRUE),
+    roll_14 = rollmeanr(x = value, k = 14, na.pad = TRUE),
+    roll_21 = rollmeanr(x = value, k = 21, na.pad = TRUE),
+    roll_28 = rollmeanr(x = value, k = 28, na.pad = TRUE)
+  )
+```

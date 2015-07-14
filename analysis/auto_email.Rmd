@@ -10,7 +10,11 @@ libraries etc
 library(readr)
 library(dplyr)
 library(zoo)
+library(ggplot2)
+library(tidyr)
+
 ```
+
 
 read the csvs
 ```{r csv, cache=FALSE}
@@ -19,14 +23,16 @@ hpk_cur <- readr::read_csv(file = "http://hpk.s3-website-us-east-1.amazonaws.com
 
 hpk_hist <- readr::read_csv(file = "http://hpk.s3-website-us-east-1.amazonaws.com/hpk_historic.csv")
 
-hpk_hist_clean <- hpk_hist[!is.na(hpk_hist$value), ]
+owners <- readr::read_csv(file = "http://hpk.s3-website-us-east-1.amazonaws.com/all_owners.csv")
+
+
 ```
 
 cleaning functions
 ```{r clean}
 
 clean_cols <- function(df) {
-  df <- as.data.frame(df)
+  df <- as.data.frame(df, stringsAsFactors = FALSE)
   return(df[, c(-6)])
 }
 
@@ -55,6 +61,74 @@ clean_h <- function(df) {
   return(cleaned)
 }
 
+stat_metadata <- function(df) {
+  
+  meta_df <- data.frame(
+    stat_name = c(
+      "OBP", "R", "RBI", "SB", "TB", "AVG",
+      "ERA", "WHIP", "W", "SV", "K", 
+      "IP", "Runs Allowed", "WH Allowed"),
+    hit_pitch = c(rep("hit", 6), rep("pitch", 8))
+  )
+  
+  df %>% dplyr::left_join(
+    meta_df,
+    by = 'stat_name'
+  )
+}
+
+true_era_whip <- function(df) {
+  #grab the target rows
+  desired_rows <- c('ERA', 'WHIP', 'IP')
+  
+  target <- df %>% dplyr::filter(
+    stat_name %in% desired_rows
+  )
+  
+  #just IP
+  ip_df <- target %>% 
+    dplyr::filter(stat_name == 'IP') 
+  names(ip_df)[names(ip_df) == 'value'] <- "IP"
+  
+  #convert and clean IP
+  #mlb codes 1 out as .1, 2 outs as .2.  replace with 0.333, 0.667
+  ip_df$IP <- gsub('.1', '.333', ip_df$IP)
+  ip_df$IP <- gsub('.2', '.667', ip_df$IP)
+  ip_df$IP <- as.numeric(ip_df$IP)
+
+  #era and whip solo
+  era_df <- target %>%
+    dplyr::filter(stat_name == 'ERA')
+  
+  whip_df <- target %>%
+    dplyr::filter(stat_name == 'WHIP')
+  
+  #join to ip
+  era_df <- era_df %>% dplyr::inner_join(
+    ip_df[, c('team_key', 'date', 'IP')],
+    by = c("team_key", "date")
+  )
+  whip_df <- whip_df %>% dplyr::inner_join(
+    ip_df[, c('team_key', 'date', 'IP')],
+    by = c("team_key", "date")
+  )
+  
+  #recover actual runs allowed and walks hits given up
+  era_df$value <- round((era_df$value / 9) * era_df$IP, 0)
+  era_df$stat_name <- 'Runs Allowed'
+  era_df$stat_id <- NA
+  era_df <- era_df %>% dplyr::select(-IP)
+  era_df$date <- as.Date(era_df$date)
+
+  whip_df$value <- round((whip_df$value) * whip_df$IP, 0)
+  whip_df$stat_name <- 'WH Allowed'
+  whip_df$stat_id <- NA
+  whip_df <- whip_df %>% dplyr::select(-IP)
+  whip_df$date <- as.Date(whip_df$date)
+  
+  dplyr::bind_rows(tbl_df(df), era_df, whip_df)
+  
+}
 ```
 
 cleaning script
@@ -64,7 +138,9 @@ cleaning script
 hpk_clean <- hpk_cur %>%
   clean_cols %>%
   clean_rows %>%
-  clean_h
+  clean_h %>%
+  true_era_whip %>%
+  stat_metadata
 
 ```
 
@@ -99,15 +175,130 @@ hpk_clean <- make_rolling(hpk_clean)
 
 ```
 
+get yesterday's data, last week's data, last month's data
+
+```{r yest_data}
+
+yesterday <- Sys.Date() - 1 
+
+hpk_yest <- hpk_clean %>% dplyr::filter(
+  date == yesterday
+)
+
+hpk_week <- hpk_clean %>% dplyr::filter(
+  date <= yesterday & date >= Sys.Date() - 8
+)
+
+hpk_month <- hpk_clean %>% dplyr::filter(
+  date <= yesterday & date >= Sys.Date() - 30
+)
+
+```
+
+#last week standings
+```{r standings}
+
+h_points <- function(df) {
+  h_total <- df %>% 
+    dplyr::filter(
+      stat_name %in% c('R', 'RBI', 'SB', 'TB', 'OBP')
+    ) %>% 
+    dplyr::group_by(
+      team_key, stat_name
+    ) %>% 
+    dplyr::summarize(
+      total_value = sum(value),
+      n = n()
+    )
+  
+  h_points <- h_total %>% 
+    dplyr::group_by(stat_name) %>%
+    dplyr::mutate(
+      rank = rank(total_value)
+    ) 
+
+  h_points
+}
+
+
+h_totals <- function(df) {
+  h_points(df) %>%
+    dplyr::group_by(team_key, n) %>%
+    dplyr::summarize(
+      total_points = sum(rank)
+    )
+}
+
+
+h_table_rank <- function(df) {
+  
+  df_detail <- h_points(df)
+  df_points_wide <- tidyr::spread(df_detail[, c(1:2, 5)], stat_name, rank)
+  
+  df_total <- h_totals(df)
+  
+  df_points_wide %>%
+    dplyr::left_join(df_total) %>%
+    dplyr::arrange(desc(total_points))  %>%
+    dplyr::left_join(
+      owners[ ,c('team_key', 'manager', 'name')],
+      by = 'team_key'
+    ) %>%
+    dplyr::select(
+      manager, R, RBI, SB, TB, OBP, total_points
+    )
+}
+
+
+h_table_stats <- function(df) {
+  
+  df_detail <- h_points(df)
+  df_stats_wide <- tidyr::spread(df_detail[, c(1:4)], stat_name, total_value)
+  df_stats_wide$OBP <- round(df_stats_wide$OBP / df_stats_wide$n, 3)
+  
+  df_total <- h_totals(df)
+  
+  df_stats_wide %>%
+    dplyr::left_join(df_total) %>%
+    dplyr::arrange(desc(total_points))  %>%
+    dplyr::left_join(
+      owners[ ,c('team_key', 'manager', 'name')],
+      by = 'team_key'
+    ) %>%
+    dplyr::select(
+      manager, R, RBI, SB, TB, OBP, total_points
+    )
+}
+
+h_table_rank(hpk_week) %>% as.data.frame()
+h_table_rank(hpk_month) %>% as.data.frame()
+
+h_table_stats(hpk_week) %>% as.data.frame()
+h_table_stats(hpk_month) %>% as.data.frame()
+
+```
+
+#vs hist dist
 ok!  now that we have rolling data, compare to historic dist
 
 
+for each owner/stat, how do they compare?
 
-# one time only 
 
-```{r hist_roll, eval = FALSE}
 
-foo <- make_rolling(hpk_hist_clean)
+per stat, compare to previous distributions
 
-write.csv(foo, file='historic_rolling.csv')
+```{r}
+ggplot(
+  data = hpk_hist %>% dplyr::filter(hit_pitch == 'hit' & scoring == TRUE),
+  aes(
+    x = roll_7
+  )
+) +
+stat_density() +
+theme_bw() +
+facet_grid(
+ facets = stat_name ~ .,
+ scales = 'free'
+)
 ```

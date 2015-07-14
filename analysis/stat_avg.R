@@ -10,6 +10,7 @@ hpk_15_slim <- hpk_15[, c(1:4)]
 hpk_14 <- readr::read_csv(file = '..\\data\\team_by_date_2014.csv', na = "-")
 hpk_13 <- readr::read_csv(file = '..\\data\\team_by_date_2013.csv', na = "-")
 hpk_12 <- readr::read_csv(file = '..\\data\\team_by_date_2012.csv', na = "-")
+#hpk_all <- rbind(hpk_14, hpk_13, hpk_12) %>% as.data.frame()
 hpk_all <- rbind(hpk_15_slim, hpk_14, hpk_13, hpk_12) %>% as.data.frame()
 
 head(hpk_all)
@@ -46,6 +47,17 @@ hpk_all <- hpk_all %>%
     stat_names
   )
 
+
+## ----manager, eval=FALSE-------------------------------------------------
+## 
+## own <- readr::read_csv(file = '..\\data\\all_owners.csv')
+## 
+## hpk_all <- hpk_all %>%
+##   dplyr::inner_join(
+##     own[, c('team_key', 'manager', 'name')],
+##     by = c('team_key' = 'team_key')
+##   )
+## 
 
 ## ----avgs----------------------------------------------------------------
 require(Cairo)
