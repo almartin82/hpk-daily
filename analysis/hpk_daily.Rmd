@@ -1,0 +1,33 @@
+---
+title: "the hpk daily"
+author: "Andrew Martin"
+date: "July 14, 2015"
+output: html_document
+---
+
+```{r helpers, message=FALSE, error=FALSE, warning=FALSE, include=FALSE, cache=TRUE}
+knitr::knit('auto_email.Rmd', tangle=TRUE)
+source('stat_avg.R')
+opts_knit$set(echo = FALSE, fig.device = 'svg')
+```
+
+# YESTERDAY
+
+
+# LAST WEEK
+```{r}
+all_table_stats(hpk_week) %>% as.data.frame()
+all_table_rank(hpk_week) %>% as.data.frame()
+
+```
+# LAST MONTH
+
+
+# INDIVIDUAL
+
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

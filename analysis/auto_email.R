@@ -1,23 +1,12 @@
----
-title: "auto_email"
-author: "Andrew Martin"
-date: "July 13, 2015"
-output: html_document
----
-
-libraries etc
-```{r lib}
+## ----lib-----------------------------------------------------------------
 library(readr)
 library(dplyr)
 library(zoo)
 library(ggplot2)
 library(tidyr)
 
-```
 
-
-read the csvs
-```{r csv, cache=FALSE}
+## ----csv, cache=FALSE----------------------------------------------------
 
 hpk_cur <- readr::read_csv(file = "http://hpk.s3-website-us-east-1.amazonaws.com/hpk_2015.csv", na = "-")
 
@@ -25,10 +14,8 @@ hpk_hist <- readr::read_csv(file = "http://hpk.s3-website-us-east-1.amazonaws.co
 
 owners <- readr::read_csv(file = "http://hpk.s3-website-us-east-1.amazonaws.com/all_owners.csv")
 
-```
 
-cleaning functions
-```{r clean}
+## ----clean---------------------------------------------------------------
 
 clean_cols <- function(df) {
   df <- as.data.frame(df, stringsAsFactors = FALSE)
@@ -136,11 +123,8 @@ true_era_whip <- function(df) {
   
   dplyr::bind_rows(tbl_df(df), era_df, whip_df)
 }
-```
 
-cleaning script
-
-```{r clean_df}
+## ----clean_df------------------------------------------------------------
 
 hpk_clean <- hpk_cur %>%
   clean_cols %>%
@@ -149,11 +133,8 @@ hpk_clean <- hpk_cur %>%
   clean_values %>%
   stat_metadata
 
-```
 
-## rolling averages
-
-```{r helper_function}
+## ----helper_function-----------------------------------------------------
 
 make_rolling <- function(df, high_n = 60) {
   
@@ -172,19 +153,13 @@ make_rolling <- function(df, high_n = 60) {
   return(df)
 }
 
-```
 
-now do it for current data 
-
-```{r cur_roll}
+## ----cur_roll------------------------------------------------------------
 
 hpk_clean <- make_rolling(hpk_clean)
 
-```
 
-get yesterday's data, last week's data, last month's data
-
-```{r yest_data}
+## ----yest_data-----------------------------------------------------------
 
 yesterday <- Sys.Date() - 2 
 
@@ -200,13 +175,8 @@ hpk_month <- hpk_clean %>% dplyr::filter(
   date <= yesterday & date >= yesterday - 30
 )
 
-```
 
-#last week standings
-
-basic standings functions
-
-```{r standings}
+## ----standings-----------------------------------------------------------
 
 h_points <- function(df) {
   h_total <- df %>% 
@@ -431,48 +401,25 @@ all_table_rank <- function(df) {
     )
 }
 
-```
 
+## ----try_it, eval = FALSE------------------------------------------------
+## h_table_rank(hpk_week) %>% as.data.frame()
+## h_table_rank(hpk_month) %>% as.data.frame()
+## 
+## h_table_stats(hpk_week) %>% as.data.frame()
+## h_table_stats(hpk_month) %>% as.data.frame()
+## 
+## p_table_rank(hpk_week) %>% as.data.frame()
+## p_table_rank(hpk_month) %>% as.data.frame()
+## 
+## p_table_stats(hpk_week) %>% as.data.frame()
+## p_table_stats(hpk_month) %>% as.data.frame()
+## 
+## all_table_stats(hpk_month) %>% as.data.frame()
+## all_table_rank(hpk_month) %>% as.data.frame()
+## 
 
-```{r try_it, eval = FALSE}
-h_table_rank(hpk_week) %>% as.data.frame()
-h_table_rank(hpk_month) %>% as.data.frame()
-
-h_table_stats(hpk_week) %>% as.data.frame()
-h_table_stats(hpk_month) %>% as.data.frame()
-
-p_table_rank(hpk_week) %>% as.data.frame()
-p_table_rank(hpk_month) %>% as.data.frame()
-
-p_table_stats(hpk_week) %>% as.data.frame()
-p_table_stats(hpk_month) %>% as.data.frame()
-
-all_table_stats(hpk_month) %>% as.data.frame()
-all_table_rank(hpk_month) %>% as.data.frame()
-
-```
-
-
-#limitations
-right now we're just taking the simple avg of the day's OBP number
-that could be improved, but we'd need to be able to recover the count of players who reached, and yahoo doesn't currently report that number.
-
-I *think* we are filtering out NA pitching days but I'm not 100% sure.  team
-346.l.49099.t.1 
-should have one zero IP pitching day in the week prior to 7/14/15 if so.  they show as count 6 vs count 7 in the data.
-and  346.l.49099.t.7  should have 2 zero pitching days in same time period.
-
-#vs hist dist
-ok!  now that we have rolling data, compare to historic dist
-
-
-for each owner/stat, how do they compare?
-
-
-
-per stat, compare to previous distributions
-
-```{r}
+## ------------------------------------------------------------------------
 ggplot(
   data = hpk_hist %>% dplyr::filter(hit_pitch == 'hit' & scoring == TRUE),
   aes(
@@ -485,4 +432,4 @@ facet_grid(
  facets = stat_name ~ .,
  scales = 'free'
 )
-```
+
