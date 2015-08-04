@@ -12,39 +12,77 @@ library(dplyr)
 library(zoo)
 ```
 
-read the csvs
-```{r csv, cache=FALSE}
+## NEW
 
-hpk_hist <- readr::read_csv(file = "http://hpk.s3-website-us-east-1.amazonaws.com/hpk_historic.csv")
+from raw files
 
-```
+```{r}
+old <- "C:/Users/AMartin/Dropbox/repositories/hpk-times"
+setwd("C:/Users/AMartin/Dropbox/repositories/hpk-daily/analysis")
 
-cleaning functions are in auto_email.Rmd
+hpk_14 <- readr::read_csv(file = '..\\data\\team_by_date_2014.csv', na = "-")
+hpk_13 <- readr::read_csv(file = '..\\data\\team_by_date_2013.csv', na = "-")
+hpk_12 <- readr::read_csv(file = '..\\data\\team_by_date_2012.csv', na = "-")
+hpk_all <- rbind(hpk_14, hpk_13, hpk_12) %>% as.data.frame()
 
-# one time only 
+#owners
+stat_names = data.frame(
+  stat_id = c(60, 7, 13, 16, 23, 4, 50, 28, 32, 42, 26, 27),
+  stat_name = c('AVG', 'R', 'RBI', 'SB', 'TB', 'OBP', 'IP', 'W', 'SV', 'K', 'ERA', 'WHIP')
+)
 
-```{r hist_roll, eval = FALSE}
-hpk_hist_clean <- hpk_hist[!is.na(hpk_hist$value), ]
-hpk_hist_clean <- true_era_whip(hpk_hist)
-
-foo <- make_rolling(hpk_hist_clean[, 2:11])
-
-#write.csv(foo, file='hpk_historic_rolling.csv')
-
-hpk_hist_rolling_slim <- foo[, c(1:10, 16, 23, 30, 37)]
-
-write.csv(hpk_hist_rolling_slim, 'hpk_historic.csv')
-
-```
-
-this didnt work because it wasnt sorted!
-
-```{r wat}
-hpk_hist_clean <- hpk_hist_clean %>%
-  dplyr::mutate(
-    roll_7 = rollmeanr(x = value, k = 7, na.pad = TRUE),
-    roll_14 = rollmeanr(x = value, k = 14, na.pad = TRUE),
-    roll_21 = rollmeanr(x = value, k = 21, na.pad = TRUE),
-    roll_28 = rollmeanr(x = value, k = 28, na.pad = TRUE)
+#stat names
+hpk_all <- hpk_all %>%
+  dplyr::inner_join(
+    stat_names
   )
+
+#owners
+own <- readr::read_csv(file = '..\\data\\all_owners.csv')
+hpk_all <- hpk_all %>%
+  dplyr::inner_join(
+    own[, c('team_key', 'manager', 'name')], 
+    by = c('team_key' = 'team_key')
+  )
+names(hpk_all)[names(hpk_all)=='name'] <- 'team_name'
+
+foo <- hpk_all %>%
+  clean_rows %>%
+  true_era_whip %>%
+  clean_values %>%
+  stat_metadata %>%
+  clean_obp
+
+#calc rolling means
+foo <- make_rolling(foo, n = c(7, 14, 21, 28, 35))
+
+year_min <- foo %>%
+  dplyr::mutate(
+    year = as.numeric(format(as.Date(date), "%Y"))
+  ) %>%
+  dplyr::group_by(year) %>%
+  dplyr::summarize(
+    start_date = min(date),
+    end_date = max(date)
+  ) 
+
+foo <- foo %>%
+  dplyr::mutate(
+    year = as.numeric(format(as.Date(date), "%Y"))
+  ) %>%
+  dplyr::left_join(
+    year_min
+  ) %>%
+  dplyr::mutate(day_of_season = date - start_date) %>%
+  dplyr::mutate(days_till_end = end_date - date) %>%
+  dplyr::select(
+    -year
+  )
+
+
+write.csv(foo, 'hpk_historic.csv', row.names = FALSE)
+
+setwd(old)
+
 ```
+
